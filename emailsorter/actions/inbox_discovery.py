@@ -1,5 +1,6 @@
 import datetime
 import logging
+import time
 from dataclasses import dataclass
 from pprint import pformat
 from typing import List, Iterable
@@ -46,13 +47,22 @@ class InboxDiscovery:
         self.ctx = email_sorter_ctx
 
     def run(self):
-        LOG.info(f"Starting Unit test result aggregator. Config: \n{str(self.config)}")
+        LOG.info(f"Starting Gmail Inbox discovery. Config: \n{str(self.config)}")
         # TODO use ThreadQueryFormat.MINIMAL or ThreadQueryFormat.METADATA to get only subject, sender, title, labels, etc.
+
+        start_time = time.time()
         query_result: ThreadQueryResults = self.ctx.gmail_wrapper.query_threads(
-            query=self.config.gmail_query, limit=self.config.request_limit, expect_one_message_per_thread=True,
-            format=ThreadQueryFormat.FULL, show_empty_body_errors=False
+            query=self.config.gmail_query,
+            limit=self.config.request_limit,
+            expect_one_message_per_thread=True,
+            format=ThreadQueryFormat.FULL,
+            show_empty_body_errors=False
         )
         LOG.info(f"Received thread query result: {query_result}")
+        end_time = time.time()
+        seconds = end_time - start_time
+        LOG.info("Fetched email threads in %d seconds", seconds)
+
         processors = [PrintingEmailContentProcessor()]
         self.process_gmail_results(query_result,
                                    split_body_by=self.config.content_line_sep,
