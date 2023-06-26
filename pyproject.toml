@@ -1,0 +1,61 @@
+[tool.black]
+line-length = 120
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.poetry]
+name = "email-sorter"
+version = "0.0.1"
+description = ""
+authors = ["Szilard Nemeth <szilard.nemeth88@gmail.com>"]
+keywords = ["Email sorting", "gmail"]
+readme = "README.md"
+homepage = "https://github.com/szilard-nemeth/email-sorter"
+repository = "https://github.com/szilard-nemeth/email-sorter"
+packages = [{include = "emailsorter"}]
+include = [
+"LICENSE"
+]
+
+
+[tool.poetry.dependencies]
+python = "^3.8.12"
+python-common-lib = "1.0.6"
+google-api-wrapper2 = "1.0.5"
+dataclasses-json = "*"
+click = "8.1.3"
+rich = "13.4.1"
+
+
+[tool.poetry.group.dev.dependencies]
+requests = "*"
+flake8 = "6.0.0"
+pytest = "*"
+pytest-html = "*"
+pytest-cov = "*"
+pre-commit = "*"
+coolname = "*"
+httpretty = "*"
+black = "*"
+autopep8 = "*"
+
+[tool.poetry.group.localdev.dependencies]
+python-common-lib = { path = "../python-commons/", develop = true }
+google-api-wrapper2 = { path = "../google-api-wrapper/", develop = true }
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -1,0 +1,2 @@
+EMAIL_SORTER_MODULE_NAME = "emailsorter"
+DEFAULT_LINE_SEP = "\\r\\n"
