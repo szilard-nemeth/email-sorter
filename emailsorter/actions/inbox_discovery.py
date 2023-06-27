@@ -19,7 +19,8 @@ LOG = logging.getLogger(__name__)
 
 SUBJECT = "subject:"
 CMD = CommandType.EMAIL_SORTER
-
+# TODO
+OFFLINE_MODE = True
 
 @dataclass
 class EmailContent:
@@ -58,7 +59,8 @@ class InboxDiscovery:
             limit=self.config.request_limit,
             expect_one_message_per_thread=True,
             format=ThreadQueryFormat.FULL,
-            show_empty_body_errors=False
+            show_empty_body_errors=False,
+            offline=OFFLINE_MODE
         )
         LOG.info(f"Received thread query result: {query_result}")
         end_time = time.time()
