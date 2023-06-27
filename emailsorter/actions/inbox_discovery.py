@@ -19,8 +19,7 @@ LOG = logging.getLogger(__name__)
 
 SUBJECT = "subject:"
 CMD = CommandType.EMAIL_SORTER
-# TODO
-OFFLINE_MODE = True
+
 
 @dataclass
 class EmailContent:
@@ -32,7 +31,7 @@ class EmailContent:
 
 
 class InboxDiscoveryConfig:
-    def __init__(self, email_sorter_ctx, gmail_query, request_limit=1000000):
+    def __init__(self, email_sorter_ctx, gmail_query, offline_mode: bool, request_limit=1000000):
         #self.session_dir = ProjectUtils.get_session_dir_under_child_dir(FileUtils.basename(output_dir))
         FileUtils.create_symlink_path_dir(
             CMD.session_link_name,
@@ -41,12 +40,13 @@ class InboxDiscoveryConfig:
         )
         self.gmail_query = gmail_query
         self.request_limit = request_limit
+        self.offline_mode = offline_mode
         self.content_line_sep = DEFAULT_LINE_SEP
 
 
 class InboxDiscovery:
     def __init__(self, config, email_sorter_ctx):
-        self.config = config
+        self.config: InboxDiscoveryConfig = config
         self.ctx = email_sorter_ctx
 
     def run(self):
@@ -60,7 +60,7 @@ class InboxDiscovery:
             expect_one_message_per_thread=True,
             format=ThreadQueryFormat.FULL,
             show_empty_body_errors=False,
-            offline=OFFLINE_MODE
+            offline=self.config.offline_mode
         )
         LOG.info(f"Received thread query result: {query_result}")
         end_time = time.time()

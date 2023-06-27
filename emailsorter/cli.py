@@ -76,14 +76,17 @@ def usage(no_wrap: bool = False):
 
 
 @cli.command()
+@click.option('-o', '--offline', is_flag=True, help='Offline mode, only work from cache')
 @click.pass_context
-def discover_inbox(ctx):
+def discover_inbox(ctx, offline):
     """
     Discovers Inbox
     """
     handler: MainCommandHandler = ctx.obj['handler']
     email_sorter_ctx = handler.ctx
-    conf = InboxDiscoveryConfig(email_sorter_ctx, gmail_query="label:inbox")
+    conf = InboxDiscoveryConfig(email_sorter_ctx,
+                                gmail_query="label:inbox",
+                                offline_mode=offline)
     discovery = InboxDiscovery(conf, email_sorter_ctx)
     discovery.run()
 
