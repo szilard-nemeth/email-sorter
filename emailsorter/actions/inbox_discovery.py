@@ -15,10 +15,15 @@ from common.model import EmailContentProcessor, PrintingEmailContentProcessor
 from core.common import CommandType, EmailSorterConfig
 from core.constants import DEFAULT_LINE_SEP
 
+from emailsorter.core.output import InboxDiscoveryResults
+from emailsorter.display.console import CliLogger
+
 LOG = logging.getLogger(__name__)
 
 SUBJECT = "subject:"
 CMD = CommandType.EMAIL_SORTER
+
+CLI_LOG = CliLogger(LOG)
 
 
 @dataclass
@@ -176,26 +181,12 @@ class InboxDiscovery:
     def print_result_table(cls, rows):
         # TODO implement console mode --> Just print this and do not log anything to console other than the table
         # TODO add progressbar while loading emails
-        from rich.console import Console
-        from rich.table import Table
-        # row = [sender, message.recipient, message.date_str, message.subject, thread.api_id, message.msg_id]
-        table = Table(title="Grouping results", expand=True, min_width=300)
 
-        table.add_column("Sender", justify="left", style="cyan", no_wrap=True)
-        table.add_column("Count from this sender", justify="right", style="cyan", no_wrap=True)
-        table.add_column("Recipient", style="magenta", no_wrap=True)
-        table.add_column("Date", no_wrap=True)
-        table.add_column("Subject", no_wrap=False, overflow="ellipsis")
-        table.add_column("Thread ID", no_wrap=True)
-        table.add_column("Message ID", no_wrap=True)
-
-        for row in rows:
-            table.add_row(*row)
-
-        console = Console(record=True)
-        console.print(table)
-
+        CLI_LOG.record_console()
+        InboxDiscoveryResults.print(rows)
         out_file = "/tmp/rich_table_output.html"
-        console.save_html(out_file)
+        files = CLI_LOG.export_to_html(out_file)
+        CLI_LOG.info("Saved console output to HTML files: %s", files)
+
         LOG.info("Execute: ")
         LOG.info("open " + out_file)
