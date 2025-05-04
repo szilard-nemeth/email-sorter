@@ -34,10 +34,6 @@ def cli(ctx, account_email, debug: bool, trace: bool):
     context = EmailSorterContext(account_email=account_email)
     ctx.obj['handler'] = MainCommandHandler(context)
 
-    EmailSorterConfig.PROJECT_OUT_ROOT = ProjectUtils.get_output_basedir(
-        EMAIL_SORTER_MODULE_NAME, project_name_hint=EMAIL_SORTER_MODULE_NAME
-    )
-
 
 @cli.command()
 @click.option('-n', '--no-wrap', is_flag=True, help='Turns off the wrapping')
