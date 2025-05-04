@@ -5,11 +5,10 @@ from pythoncommons.logging_setup import SimpleLoggingSetupConfig, SimpleLoggingS
 from pythoncommons.os_utils import OsUtils
 from pythoncommons.project_utils import ProjectRootDeterminationStrategy, ProjectUtils
 
-from core.common import EmailSorterEnvVar, EmailSorterConfig
-
 import logging
 
-from core.constants import EMAIL_SORTER_MODULE_NAME
+from emailsorter.core.constants import EMAIL_SORTER_MODULE_NAME
+from emailsorter.core.common import EmailSorterEnvVar
 
 LOG = logging.getLogger(__name__)
 

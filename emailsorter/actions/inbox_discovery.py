@@ -1,19 +1,17 @@
 import datetime
 import logging
 import time
-from collections import defaultdict
 from dataclasses import dataclass
 from pprint import pformat
 from typing import List, Iterable, Tuple
 
-import rich
 from googleapiwrapper.gmail_api import ThreadQueryResults
 from googleapiwrapper.gmail_domain import GmailMessage, ThreadQueryFormat
 from pythoncommons.file_utils import FileUtils
 
-from common.model import EmailContentProcessor, PrintingEmailContentProcessor
-from core.common import CommandType, EmailSorterConfig
-from core.constants import DEFAULT_LINE_SEP
+from emailsorter.common.model import EmailContentProcessor, PrintingEmailContentProcessor
+from emailsorter.core.common import CommandType, EmailSorterConfig
+from emailsorter.core.constants import DEFAULT_LINE_SEP
 
 from emailsorter.core.output import InboxDiscoveryResults
 from emailsorter.display.console import CliLogger

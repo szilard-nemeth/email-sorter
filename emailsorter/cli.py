@@ -3,13 +3,10 @@ import time
 
 import click
 from pythoncommons.constants import ExecutionMode
-from pythoncommons.project_utils import ProjectUtils
 from rich import print as rich_print, box
 from rich.table import Table
 
-from core.common import EmailSorterConfig
-from core.constants import EMAIL_SORTER_MODULE_NAME
-from core.error import EmailSorterException
+from emailsorter.core.error import EmailSorterException
 from emailsorter.actions.inbox_discovery import InboxDiscovery, InboxDiscoveryConfig
 from emailsorter.core.context import EmailSorterContext
 from emailsorter.core.handler import MainCommandHandler
