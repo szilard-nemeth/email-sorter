@@ -8,7 +8,7 @@ from pythoncommons.project_utils import ProjectRootDeterminationStrategy, Projec
 import logging
 
 from emailsorter.core.constants import EMAIL_SORTER_MODULE_NAME
-from emailsorter.core.common import EmailSorterEnvVar
+from emailsorter.core.common import EmailSorterEnvVar, EmailSorterConfig
 
 LOG = logging.getLogger(__name__)
 
