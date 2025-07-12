@@ -3,9 +3,16 @@ from abc import abstractmethod, ABC
 
 import logging
 from collections import defaultdict
-from typing import Iterable
+from enum import Enum
+from typing import Iterable, Callable
+
+from googleapiwrapper.gmail_domain import GmailMessage
 
 LOG = logging.getLogger(__name__)
+
+class ProcessorResultType(Enum):
+    SIMPLIFIED = "simplified"
+    DETAILED = "detailed"
 
 
 class EmailContentProcessor(ABC):
@@ -40,12 +47,13 @@ class NoOpEmailContentProcessor(EmailContentProcessor):
 
 
 class GroupingEmailMessageProcessor(EmailMessageProcessor):
-    def __init__(self):
+    def __init__(self, result_type: ProcessorResultType):
         self.senders = []
         self.recipients = []
         self.subjects = []
         self.senders_set = set()
         self.grouping_by_sender = defaultdict(list)
+        self.result_type = result_type
 
     def process(self, message: 'GmailMessage'):
         # This does print the whole email
@@ -61,15 +69,37 @@ class GroupingEmailMessageProcessor(EmailMessageProcessor):
             # Sender X sends a mail to email Z
             # Z forwards the mail to recipient Y
             # So Z becomes the sender and Sender X was the original sender
-            LOG.warning("Multiple senders found for email thread. Sender, recipient, subject: %s",
-                        list(zip(self.senders, self.recipients, self.subjects)))
+            # TODO Debug this with warning log
+            # LOG.warning("Multiple senders found for email thread. Sender, recipient, subject: %s",
+            #             list(zip(self.senders, self.recipients, self.subjects)))
+            pass
 
         self.grouping_by_sender[message.sender_email].append((message.thread_id, message))
 
     def convert_to_table_rows(self):
-        # TODO grouping_by_sender_2 and table_rows shouldn't be fields!
-        self.grouping_by_sender_2 = {}
-        self.table_rows = []
+        row_producer = self._produce_simplified_row if self.result_type == ProcessorResultType.SIMPLIFIED else ProcessorResultType.DETAILED
+        grouping_for_result_table, table_rows = self._get_results(row_producer)
+        return grouping_for_result_table, table_rows
+
+    @staticmethod
+    def _produce_simplified_row(thread_id: str, message: GmailMessage, sender: str, no_of_messages_from_sender: int):
+        return [sender,
+                str(no_of_messages_from_sender)
+                ]
+
+    @staticmethod
+    def _produce_detailed_row(thread_id: str, message: GmailMessage, sender: str, no_of_messages_from_sender: int):
+        return [sender,
+                str(no_of_messages_from_sender),
+                message.recipient_email,
+                message.date_str,
+                message.subject,
+                thread_id,
+                message.msg_id]
+
+    def _get_results(self, row_producer: Callable[[str, GmailMessage, str, int], None]):
+        grouping_for_result_table = {}
+        table_rows = []
         for sender, thread_message_lst in self.grouping_by_sender.items():
             no_of_messages_from_sender = len(thread_message_lst)
             # TODO add gmail query URL for each recipient: https://mail.google.com/mail/u/0/#search/label%3Ainbox
@@ -77,15 +107,10 @@ class GroupingEmailMessageProcessor(EmailMessageProcessor):
             for thread_message in thread_message_lst:
                 thread = thread_message[0]
                 message = thread_message[1]
-                self.grouping_by_sender_2[sender] = (thread, message.msg_id, message.subject)
-                row = [sender,
-                       str(no_of_messages_from_sender),
-                       message.recipient_email,
-                       message.date_str,
-                       message.subject,
-                       thread,
-                       message.msg_id]
-                self.table_rows.append(row)
-        return self.table_rows
+                grouping_for_result_table[sender] = (thread, message.msg_id, message.subject)
+                row = row_producer(thread, message, sender, no_of_messages_from_sender)
+                table_rows.append(row)
+        return grouping_for_result_table, table_rows
+
 
 

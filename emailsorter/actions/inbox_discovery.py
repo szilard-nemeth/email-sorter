@@ -11,11 +11,12 @@ from googleapiwrapper.gmail_domain import GmailMessage, ThreadQueryFormat
 from pythoncommons.file_utils import FileUtils
 
 from emailsorter.common.model import EmailContentProcessor, PrintingEmailContentProcessor, \
-    GroupingEmailMessageProcessor, EmailMessageProcessor, NoOpEmailContentProcessor
+    GroupingEmailMessageProcessor, EmailMessageProcessor, NoOpEmailContentProcessor, ProcessorResultType
 from emailsorter.core.common import CommandType, EmailSorterConfig
 from emailsorter.core.constants import DEFAULT_LINE_SEP
 
-from emailsorter.core.output import InboxDiscoveryResults
+from emailsorter.core.output import InboxDiscoveryResults, GroupingEmailMessageProcessorRepresentation, \
+    GroupingEmailMessageProcessorRepresentation, ProcessorRepresentationAbs
 from emailsorter.display.console import CliLogger
 
 LOG = logging.getLogger(__name__)
@@ -67,20 +68,22 @@ class InboxDiscovery:
             show_empty_body_errors=False,
             offline=self.config.offline_mode
         )
-        LOG.info(f"Received thread query result: {query_result}")
+        LOG.trace(f"Received thread query result: {query_result}")
         end_time = time.time()
         seconds = end_time - start_time
         LOG.info("Fetched email threads in %d seconds", seconds)
 
-        grouping_processor = GroupingEmailMessageProcessor()
+        result_type = ProcessorResultType.SIMPLIFIED
+        grouping_processor = GroupingEmailMessageProcessor(result_type)
         self.process_gmail_results(query_result,
                                    split_body_by=self.config.content_line_sep,
                                    email_content_processors=[NoOpEmailContentProcessor()],
                                    email_message_processors=[grouping_processor])
+        grouping_for_result_table, table_rows = grouping_processor.convert_to_table_rows()
 
         # TODO order table rows by 'no_of_messages_from_sender'
-        rich.print(grouping_processor.grouping_by_sender_2)
-        InboxDiscovery.print_result_table(grouping_processor.table_rows)
+        rich.print(grouping_for_result_table)
+        InboxDiscovery.print_result_table(table_rows, GroupingEmailMessageProcessorRepresentation(result_type))
 
     @staticmethod
     def process_gmail_results(
@@ -104,10 +107,6 @@ class InboxDiscovery:
 
             for p in email_message_processors:
                 p.process(message)
-
-        # Only invoke convert once per processor
-        for p in email_message_processors:
-            p.convert_to_table_rows()
 
         if skipped_emails:
             LOG.warning(
@@ -143,12 +142,14 @@ class InboxDiscovery:
         return True
 
     @classmethod
-    def print_result_table(cls, rows):
+    def print_result_table(cls, rows, processor_repr: ProcessorRepresentationAbs):
         # TODO implement console mode --> Just print this and do not log anything to console other than the table
         # TODO add progressbar while loading emails
 
         CLI_LOG.record_console()
-        InboxDiscoveryResults.print(rows)
+        cols = processor_repr.get_cols()
+        col_styles = processor_repr.get_col_styles()
+        InboxDiscoveryResults.print(rows, cols, col_styles, wide_print=True, show_lines=False)
         out_file = "/tmp/rich_table_output.html"
         files = CLI_LOG.export_to_html(out_file)
         CLI_LOG.info("Saved console output to HTML files: %s", files)
