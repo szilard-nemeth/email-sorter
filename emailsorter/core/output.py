@@ -13,11 +13,6 @@ class InboxDiscoveryResults:
         table.print()
 
 
-    @staticmethod
-    def print_table(table: EmailTable, rows):
-        table.render(rows)
-        table.print()
-
 class ProcessorRepresentationAbs(ABC):
     @abstractmethod
     def get_cols(self):

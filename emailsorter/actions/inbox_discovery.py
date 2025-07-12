@@ -150,7 +150,7 @@ class InboxDiscovery:
         CLI_LOG.record_console()
         cols = processor_repr.get_cols()
         col_styles = processor_repr.get_col_styles()
-        render_settings = TableRenderSettings(col_styles, wide_print=True, show_lines=False)
+        render_settings = TableRenderSettings(col_styles, wide_print=True, show_lines=False, sort_by_column="Count from this sender")
         InboxDiscoveryResults.print(rows, cols, render_settings)
         out_file = "/tmp/rich_table_output.html"
         files = CLI_LOG.export_to_html(out_file)

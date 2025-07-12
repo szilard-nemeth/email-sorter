@@ -51,15 +51,14 @@ class TableColumnStyles:
 
 
 class TableRenderSettings:
-    def __init__(self,
-                 col_styles: TableColumnStyles,
-                 wide_print=False,
-                 show_lines=False):
+    def __init__(self, col_styles: TableColumnStyles, wide_print=False, show_lines=False,
+                 sort_by_column: str=None):
         if not col_styles:
             raise ValueError("col_styles cannot be None!")
         self._col_styles: TableColumnStyles = col_styles
         self._wide_print = wide_print
         self._show_lines = show_lines
+        self.sort_by_column = sort_by_column
 
     def format_value(self, col: str, val: str):
         style = self._col_styles.style_by_col(col)
@@ -93,11 +92,52 @@ class EmailTable:
 
     def render(self, rows: List[List[Any]]):
         self._rows = rows
+        self._rows = self._do_sorting(rows)
+
         for row in self._rows:
             vals = [self._render_settings.format_value(self._cols[idx], val) for idx, val in enumerate(row)]
             self._table.add_row(*vals)
 
+    def _do_sorting(self, rows):
+        def is_numeric_column(col_idx):
+            for row in rows:
+                try:
+                    int(row[col_idx])
+                except (ValueError, TypeError):
+                    return False
+            return True
+
+        sort_by_column = self.get_sort_by_column()
+        sort_by_column_idx = self.get_sort_by_column_idx(sort_by_column)
+
+        LOG.debug("Sorting by column:", sort_by_column)
+        LOG.debug("Column index:", sort_by_column_idx)
+        LOG.debug("First 5 values to sort by:", [row[sort_by_column_idx] for row in rows[:5]])
+
+        # if sort_by_column:
+        #     rows = sorted(rows, key=lambda row: int(row[sort_by_column_idx]), reverse=True)
+        if sort_by_column:
+            if is_numeric_column(sort_by_column_idx):
+                rows = sorted(rows, key=lambda row: int(row[sort_by_column_idx]), reverse=True)
+            else:
+                rows = sorted(rows, key=lambda row: str(row[sort_by_column_idx]).lower(), reverse=False)
+        return rows
+
     def print(self):
         CLI_LOG.print(self._table, wide_print=self._render_settings._wide_print)
+
+    def get_sort_by_column(self):
+        col = self._render_settings.sort_by_column
+        if col:
+            if col not in self._cols:
+                raise ValueError(f"Invalid sort by column: {col}. Available column names are: {self._cols}")
+            return col
+        return None
+
+    def get_sort_by_column_idx(self, col: str):
+        for idx, c in enumerate(self._cols):
+            if c == col:
+                return idx
+        return -1
 
 
