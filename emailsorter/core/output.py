@@ -6,10 +6,9 @@ from emailsorter.display.table import TableColumnStyles, TableRenderSettings, Em
 
 class InboxDiscoveryResults:
     @staticmethod
-    def print(rows, cols, col_styles, wide_print=False, show_lines=False):
+    def print(rows, cols, render_settings: TableRenderSettings):
         # TODO add this to TableRenderSettings: title="Grouping results", expand=True, min_width=300
-        render = TableRenderSettings(col_styles, wide_print=wide_print, show_lines=show_lines)
-        table = EmailTable(cols, render)
+        table = EmailTable(cols, render_settings)
         table.render(rows)
         table.print()
 

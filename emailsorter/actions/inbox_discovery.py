@@ -18,6 +18,7 @@ from emailsorter.core.constants import DEFAULT_LINE_SEP
 from emailsorter.core.output import InboxDiscoveryResults, GroupingEmailMessageProcessorRepresentation, \
     GroupingEmailMessageProcessorRepresentation, ProcessorRepresentationAbs
 from emailsorter.display.console import CliLogger
+from emailsorter.display.table import TableRenderSettings
 
 LOG = logging.getLogger(__name__)
 
@@ -149,7 +150,8 @@ class InboxDiscovery:
         CLI_LOG.record_console()
         cols = processor_repr.get_cols()
         col_styles = processor_repr.get_col_styles()
-        InboxDiscoveryResults.print(rows, cols, col_styles, wide_print=True, show_lines=False)
+        render_settings = TableRenderSettings(col_styles, wide_print=True, show_lines=False)
+        InboxDiscoveryResults.print(rows, cols, render_settings)
         out_file = "/tmp/rich_table_output.html"
         files = CLI_LOG.export_to_html(out_file)
         CLI_LOG.info("Saved console output to HTML files: %s", files)
