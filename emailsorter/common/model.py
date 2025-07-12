@@ -55,6 +55,8 @@ class GroupingEmailMessageProcessor(EmailMessageProcessor):
         self.grouping_by_sender = defaultdict(list)
         self.result_type = result_type
 
+        self._visited_senders = set()
+
     def process(self, message: 'GmailMessage'):
         # This does print the whole email
         # LOG.info("Processing email: %s", message)
@@ -81,14 +83,16 @@ class GroupingEmailMessageProcessor(EmailMessageProcessor):
         grouping_for_result_table, table_rows = self._get_results(row_producer)
         return grouping_for_result_table, table_rows
 
-    @staticmethod
-    def _produce_simplified_row(thread_id: str, message: GmailMessage, sender: str, no_of_messages_from_sender: int):
-        return [sender,
+    def _produce_simplified_row(self, thread_id: str, message: GmailMessage, sender: str, no_of_messages_from_sender: int):
+        if sender not in self._visited_senders:
+            self._visited_senders.add(sender)
+            return [sender,
                 str(no_of_messages_from_sender)
                 ]
+        # This sender was already visited, do not return new row for this sender again
+        return None
 
-    @staticmethod
-    def _produce_detailed_row(thread_id: str, message: GmailMessage, sender: str, no_of_messages_from_sender: int):
+    def _produce_detailed_row(self, thread_id: str, message: GmailMessage, sender: str, no_of_messages_from_sender: int):
         return [sender,
                 str(no_of_messages_from_sender),
                 message.recipient_email,
@@ -109,7 +113,8 @@ class GroupingEmailMessageProcessor(EmailMessageProcessor):
                 message = thread_message[1]
                 grouping_for_result_table[sender] = (thread, message.msg_id, message.subject)
                 row = row_producer(thread, message, sender, no_of_messages_from_sender)
-                table_rows.append(row)
+                if row:
+                    table_rows.append(row)
         return grouping_for_result_table, table_rows
 
 
