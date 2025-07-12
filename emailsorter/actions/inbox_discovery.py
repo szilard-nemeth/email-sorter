@@ -5,11 +5,13 @@ from dataclasses import dataclass
 from pprint import pformat
 from typing import List, Iterable, Tuple
 
+import rich
 from googleapiwrapper.gmail_api import ThreadQueryResults
 from googleapiwrapper.gmail_domain import GmailMessage, ThreadQueryFormat
 from pythoncommons.file_utils import FileUtils
 
-from emailsorter.common.model import EmailContentProcessor, PrintingEmailContentProcessor
+from emailsorter.common.model import EmailContentProcessor, PrintingEmailContentProcessor, \
+    GroupingEmailMessageProcessor, EmailMessageProcessor, NoOpEmailContentProcessor
 from emailsorter.core.common import CommandType, EmailSorterConfig
 from emailsorter.core.constants import DEFAULT_LINE_SEP
 
@@ -70,67 +72,22 @@ class InboxDiscovery:
         seconds = end_time - start_time
         LOG.info("Fetched email threads in %d seconds", seconds)
 
-        processors = [PrintingEmailContentProcessor()]
-        # self.process_gmail_results(query_result,
-        #                            split_body_by=self.config.content_line_sep,
-        #                            email_content_processors=processors)
-        #
-        gmail_threads = query_result.threads
-        grouping_by_sender = defaultdict(list)
-
-        for thread in gmail_threads.threads:
-            senders = []
-            recipients = []
-            subjects = []
-            senders_set = set()
-
-            for message in thread.messages:
-                senders_set.add(message.sender_email)
-
-                senders.append(message.sender_email)
-                recipients.append(message.recipient)
-                subjects.append(message.subject)
-
-                if len(senders_set) > 1:
-                    # This can happen in a following case:
-                    # Sender X sends a mail to email Z
-                    # Z forwards the mail to recipient Y
-                    # So Z becomes the sender and Sender X was the original sender
-                    LOG.warning("Multiple senders found for email thread. Sender, recipient, subject: %s",
-                                list(zip(senders, recipients, subjects)))
-
-                grouping_by_sender[message.sender_email].append((thread, message))
-
-
-        grouping_by_sender_2 = {}
-        table_rows = []
-        for sender, thread_message_lst in grouping_by_sender.items():
-            no_of_messages_from_sender = len(thread_message_lst)
-            # TODO addd gmail query URL for each recipient: https://mail.google.com/mail/u/0/#search/label%3Ainbox
-
-            for thread_message in thread_message_lst:
-                thread = thread_message[0]
-                message = thread_message[1]
-                grouping_by_sender_2[sender] = (thread.api_id, message.msg_id, message.subject)
-                row = [sender,
-                       str(no_of_messages_from_sender),
-                       message.recipient_email,
-                       message.date_str,
-                       message.subject,
-                       thread.api_id,
-                       message.msg_id]
-                table_rows.append(row)
+        grouping_processor = GroupingEmailMessageProcessor()
+        self.process_gmail_results(query_result,
+                                   split_body_by=self.config.content_line_sep,
+                                   email_content_processors=[NoOpEmailContentProcessor()],
+                                   email_message_processors=[grouping_processor])
 
         # TODO order table rows by 'no_of_messages_from_sender'
-
-        # rich.print(grouping_by_sender_2)
-        InboxDiscovery.print_result_table(table_rows)
+        rich.print(grouping_processor.grouping_by_sender_2)
+        InboxDiscovery.print_result_table(grouping_processor.table_rows)
 
     @staticmethod
     def process_gmail_results(
         query_result: ThreadQueryResults,
         split_body_by: str,
         email_content_processors: Iterable[EmailContentProcessor],
+        email_message_processors: Iterable[EmailMessageProcessor]
     ):
         if not email_content_processors:
             email_content_processors = []
@@ -142,8 +99,15 @@ class InboxDiscovery:
             LOG.debug("Processing message: %s", email_content.subject)
 
             # Email content processor is invoked with original lines from email (except stripping)
-            for processor in email_content_processors:
-                processor.process(email_content)
+            for p in email_content_processors:
+                p.process(email_content)
+
+            for p in email_message_processors:
+                p.process(message)
+
+        # Only invoke convert once per processor
+        for p in email_message_processors:
+            p.convert_to_table_rows()
 
         if skipped_emails:
             LOG.warning(
@@ -156,6 +120,9 @@ class InboxDiscovery:
         # Extract all lines first (from all message parts)
         all_lines = []
         for msg_part in message.get_all_plain_text_parts():
+            if not isinstance(msg_part.body_data, str):
+                print("INSTANCE IS WRONG: " + str(msg_part.body_data))
+                continue
             lines = msg_part.body_data.split(split_body_by)
             lines = list(map(lambda line: line.strip(), lines))
             all_lines.extend(lines)
