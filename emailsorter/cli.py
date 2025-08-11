@@ -12,6 +12,9 @@ from emailsorter.core.context import EmailSorterContext
 from emailsorter.core.handler import MainCommandHandler
 from initializer import Initializer
 
+GMAIL_QUERY_INBOX = "label:inbox"
+GMAIL_QUERY_LABEL_EXTERNAL = "label:external"
+
 LOG = logging.getLogger(__name__)
 
 
@@ -70,15 +73,20 @@ def usage(no_wrap: bool = False):
 
 @cli.command()
 @click.option('-o', '--offline', is_flag=True, help='Offline mode, only work from cache')
+@click.option('-mq', '--main-query', help='Main query to filter gmail results off. Default is: All items from Gmail inbox')
 @click.pass_context
-def discover_inbox(ctx, offline):
+def discover_inbox(ctx, offline, main_query: str):
     """
     Discovers Inbox
     """
     handler: MainCommandHandler = ctx.obj['handler']
     email_sorter_ctx = handler.ctx
+
+    if not main_query:
+        main_query = GMAIL_QUERY_INBOX
+
     conf = InboxDiscoveryConfig(email_sorter_ctx,
-                                gmail_query="label:inbox",
+                                gmail_query=main_query,
                                 offline_mode=offline)
     discovery = InboxDiscovery(conf, email_sorter_ctx)
     discovery.run()
