@@ -1,3 +1,5 @@
+from googleapiwrapper.gmail_cache import CachingStrategyType
+
 from emailsorter.core.common import CommandType
 from emailsorter.core.common import PROJECT_NAME, SECRET_PROJECTS_DIR
 from googleapiwrapper.common import ServiceType
@@ -9,7 +11,7 @@ from pythoncommons.project_utils import ProjectUtils
 
 
 class EmailSorterContext:
-    def __init__(self, account_email):
+    def __init__(self, use_cache: bool, account_email: str):
         # Set up dirs
         self.output_dir = ProjectUtils.get_output_child_dir(CommandType.EMAIL_SORTER.output_dir_name)
         self.session_dir = ProjectUtils.get_session_dir_under_child_dir(FileUtils.basename(self.output_dir))
@@ -25,7 +27,8 @@ class EmailSorterContext:
             secret_basedir=SECRET_PROJECTS_DIR,
             account_email=self.account_email,
         )
-        self.gmail_wrapper = GmailWrapper(self.authorizer, output_basedir=self.email_cache_dir)
+        caching_strategy = CachingStrategyType.FILESYSTEM_CACHE_STRATEGY if use_cache else CachingStrategyType.NO_CACHE
+        self.gmail_wrapper = GmailWrapper(self.authorizer, cache_strategy_type=caching_strategy, output_basedir=self.email_cache_dir)
 
     @staticmethod
     def _get_attribute(args, attr_name, default=None):

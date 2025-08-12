@@ -23,8 +23,9 @@ LOG = logging.getLogger(__name__)
 @click.option('-e', '--account-email', help='Account\'s email address', required=True)
 @click.option('-d', '--debug', is_flag=True, help='turn on DEBUG level logging')
 @click.option('-t', '--trace', is_flag=True, help='turn on TRACE level logging')
+@click.option('--no-cache', is_flag=True, help='Disable email caching')
 @click.pass_context
-def cli(ctx, account_email, debug: bool, trace: bool):
+def cli(ctx, account_email, debug: bool, trace: bool, no_cache: bool):
     if ctx.invoked_subcommand == "usage":
         return
 
@@ -35,7 +36,7 @@ def cli(ctx, account_email, debug: bool, trace: bool):
     ctx.obj['loglevel'] = level
 
     LOG.info("Invoked command {}".format(ctx.invoked_subcommand))
-    context = EmailSorterContext(account_email=account_email)
+    context = EmailSorterContext(use_cache=not no_cache, account_email=account_email)
     ctx.obj['handler'] = MainCommandHandler(context)
 
 
