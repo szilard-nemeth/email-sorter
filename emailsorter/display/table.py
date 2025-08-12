@@ -110,9 +110,9 @@ class EmailTable:
         sort_by_column = self.get_sort_by_column()
         sort_by_column_idx = self.get_sort_by_column_idx(sort_by_column)
 
-        LOG.debug("Sorting by column:", sort_by_column)
-        LOG.debug("Column index:", sort_by_column_idx)
-        LOG.debug("First 5 values to sort by:", [row[sort_by_column_idx] for row in rows[:5]])
+        LOG.debug("Sorting by column: %s", sort_by_column)
+        LOG.debug("Column index: %s", sort_by_column_idx)
+        LOG.debug("First 5 values to sort by: %s", [row[sort_by_column_idx] for row in rows[:5]])
 
         # if sort_by_column:
         #     rows = sorted(rows, key=lambda row: int(row[sort_by_column_idx]), reverse=True)
