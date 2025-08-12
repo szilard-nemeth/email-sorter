@@ -76,7 +76,7 @@ def usage(no_wrap: bool = False):
 @cli.command()
 @click.option('-o', '--offline', is_flag=True, help='Offline mode, only work from cache')
 @click.option('-mq', '--main-query', help='Main query to filter gmail results off. Default is: All items from Gmail inbox')
-@click.option('--fetch-mode', required=False, type=click.Choice([ThreadQueryFormat.FULL.value, ThreadQueryFormat.MINIMAL.value], case_sensitive=True), help='Fetch mode for querying threads and messages')
+@click.option('--fetch-mode', required=False, type=click.Choice([ThreadQueryFormat.FULL.value, ThreadQueryFormat.METADATA.value], case_sensitive=True), help='Fetch mode for querying threads and messages')
 @click.pass_context
 def discover_inbox(ctx, offline, main_query: str, fetch_mode: str):
     """
