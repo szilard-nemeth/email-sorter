@@ -2,6 +2,7 @@ import logging
 import time
 
 import click
+from googleapiwrapper.gmail_domain import ThreadQueryFormat
 from pythoncommons.constants import ExecutionMode
 from rich import print as rich_print, box
 from rich.table import Table
@@ -74,8 +75,9 @@ def usage(no_wrap: bool = False):
 @cli.command()
 @click.option('-o', '--offline', is_flag=True, help='Offline mode, only work from cache')
 @click.option('-mq', '--main-query', help='Main query to filter gmail results off. Default is: All items from Gmail inbox')
+@click.option('--fetch-mode', required=False, type=click.Choice([ThreadQueryFormat.FULL.value, ThreadQueryFormat.MINIMAL.value], case_sensitive=True), help='Fetch mode for querying threads and messages')
 @click.pass_context
-def discover_inbox(ctx, offline, main_query: str):
+def discover_inbox(ctx, offline, main_query: str, fetch_mode: str):
     """
     Discovers Inbox
     """
@@ -85,8 +87,14 @@ def discover_inbox(ctx, offline, main_query: str):
     if not main_query:
         main_query = GMAIL_QUERY_INBOX
 
+    if fetch_mode:
+        fetch_mode = ThreadQueryFormat(fetch_mode)
+    else:
+        fetch_mode = ThreadQueryFormat.METADATA
+
     conf = InboxDiscoveryConfig(email_sorter_ctx,
                                 gmail_query=main_query,
+                                fetch_mode=fetch_mode,
                                 offline_mode=offline)
     discovery = InboxDiscovery(conf, email_sorter_ctx)
     discovery.run()

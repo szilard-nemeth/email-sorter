@@ -38,7 +38,7 @@ class EmailContent:
 
 
 class InboxDiscoveryConfig:
-    def __init__(self, email_sorter_ctx, gmail_query, offline_mode: bool, request_limit=1000000):
+    def __init__(self, email_sorter_ctx, gmail_query, fetch_mode: ThreadQueryFormat, offline_mode: bool, request_limit=1000000):
         #self.session_dir = ProjectUtils.get_session_dir_under_child_dir(FileUtils.basename(output_dir))
         FileUtils.create_symlink_path_dir(
             CMD.session_link_name,
@@ -46,6 +46,7 @@ class InboxDiscoveryConfig:
             EmailSorterConfig.PROJECT_OUT_ROOT,
         )
         self.gmail_query = gmail_query
+        self.fetch_mode = fetch_mode
         self.request_limit = request_limit
         self.offline_mode = offline_mode
         self.content_line_sep = DEFAULT_LINE_SEP
@@ -65,7 +66,7 @@ class InboxDiscovery:
             query=self.config.gmail_query,
             limit=self.config.request_limit,
             expect_one_message_per_thread=True,
-            format=ThreadQueryFormat.FULL,
+            format=self.config.fetch_mode,
             show_empty_body_errors=False,
             offline=self.config.offline_mode
         )
