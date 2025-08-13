@@ -79,7 +79,7 @@ class GroupingEmailMessageProcessor(EmailMessageProcessor):
         self.grouping_by_sender[message.sender_email].append((message.thread_id, message))
 
     def convert_to_table_rows(self):
-        row_producer = self._produce_simplified_row if self.result_type == ProcessorResultType.SIMPLIFIED else ProcessorResultType.DETAILED
+        row_producer = self._produce_simplified_row if self.result_type == ProcessorResultType.SIMPLIFIED else self._produce_detailed_row
         grouping_for_result_table, table_rows = self._get_results(row_producer)
         return grouping_for_result_table, table_rows
 
@@ -116,6 +116,29 @@ class GroupingEmailMessageProcessor(EmailMessageProcessor):
                 if row:
                     table_rows.append(row)
         return grouping_for_result_table, table_rows
+
+class MultipleFilterResultProcessor(EmailMessageProcessor):
+    def __init__(self):
+        self.count_per_filter = {}
+        self._filters_by_description = {}
+
+    def process(self, message: 'GmailMessage'):
+        # No-op for this processor
+        pass
+
+    def convert_to_table_rows(self):
+        return self._get_rows()
+
+    def _get_rows(self):
+        rows = []
+        for filter_desc, count in self.count_per_filter.items():
+            filter = self._filters_by_description[filter_desc]
+            rows.append([filter_desc, count, filter.gmail_link])
+        return rows
+
+    def add_result(self, filter: 'GmailFilter', processor_results):
+        self._filters_by_description[filter.description] = filter
+        self.count_per_filter[filter.description] = processor_results["count"]
 
 
 

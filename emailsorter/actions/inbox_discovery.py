@@ -1,22 +1,26 @@
 import datetime
+import json
 import logging
 import time
-from dataclasses import dataclass
+import urllib
+from dataclasses import dataclass, field
 from pprint import pformat
 from typing import List, Iterable, Tuple
 
 import rich
+from dataclasses_json import dataclass_json, config
 from googleapiwrapper.gmail_api import ThreadQueryResults
 from googleapiwrapper.gmail_domain import GmailMessage, ThreadQueryFormat
 from pythoncommons.file_utils import FileUtils
 
-from emailsorter.common.model import EmailContentProcessor, PrintingEmailContentProcessor, \
-    GroupingEmailMessageProcessor, EmailMessageProcessor, NoOpEmailContentProcessor, ProcessorResultType
+from emailsorter.common.model import EmailContentProcessor, \
+    GroupingEmailMessageProcessor, EmailMessageProcessor, NoOpEmailContentProcessor, ProcessorResultType, \
+    MultipleFilterResultProcessor
 from emailsorter.core.common import CommandType, EmailSorterConfig
 from emailsorter.core.constants import DEFAULT_LINE_SEP
 
-from emailsorter.core.output import InboxDiscoveryResults, GroupingEmailMessageProcessorRepresentation, \
-    GroupingEmailMessageProcessorRepresentation, ProcessorRepresentationAbs
+from emailsorter.core.output import InboxDiscoveryResults, ProcessorRepresentationAbs, \
+    MultipleFilterResultProcessorRepresentation, GroupingEmailMessageProcessorRepresentation
 from emailsorter.display.console import CliLogger
 from emailsorter.display.table import TableRenderSettings
 
@@ -36,6 +40,19 @@ class EmailContent:
     subject: str
     lines: Iterable[str]
 
+@dataclass_json
+@dataclass
+class GmailFilter:
+    description: str
+    filter_expression: str = field(
+        metadata=config(field_name="filter-expression")
+    )
+    gmail_link: str = None
+
+    def __post_init__(self):
+        encoded_expr = urllib.parse.quote(self.filter_expression, safe='')
+        self.gmail_link = f"https://mail.google.com/mail/u/0/#search/{encoded_expr}"
+
 
 class InboxDiscoveryConfig:
     def __init__(self, email_sorter_ctx, gmail_query, fetch_mode: ThreadQueryFormat, offline_mode: bool, request_limit=1000000):
@@ -52,6 +69,18 @@ class InboxDiscoveryConfig:
         self.content_line_sep = DEFAULT_LINE_SEP
 
 
+class InboxDiscoveryHelpers:
+    @staticmethod
+    def convert_to_filter_objs(filters_file):
+        LOG.info(f"Processing filters file: {filters_file}")
+        with filters_file:
+            json_data = json.load(filters_file)
+            filters = [GmailFilter.from_dict(item) for item in json_data]
+            filtered_filters = list(
+                filter(lambda f: f.filter_expression != "TODO", filters))
+            return filtered_filters
+
+
 class InboxDiscovery:
     def __init__(self, config, email_sorter_ctx):
         self.config: InboxDiscoveryConfig = config
@@ -59,7 +88,6 @@ class InboxDiscovery:
 
     def run(self):
         LOG.info(f"Starting Gmail Inbox discovery. Config: \n{str(self.config)}")
-        # TODO use ThreadQueryFormat.MINIMAL or ThreadQueryFormat.METADATA to get only subject, sender, title, labels, etc.
         # TODO Add new method to gmail_wrapper that only works from cache
         start_time = time.time()
         query_result: ThreadQueryResults = self.ctx.gmail_wrapper.query_threads(
@@ -87,12 +115,42 @@ class InboxDiscovery:
         rich.print(grouping_for_result_table)
         InboxDiscovery.print_result_table(table_rows, GroupingEmailMessageProcessorRepresentation(result_type))
 
+    def create_filter_stats(self, filters_file: str):
+        start_time = time.time()
+        LOG.info(f"Starting creating filter statistics. Config: \n{str(self.config)}")
+        filters: List[GmailFilter] = InboxDiscoveryHelpers.convert_to_filter_objs(filters_file)
+        LOG.debug("Parsed filters: %s", filters)
+
+        result_processor = MultipleFilterResultProcessor()
+        for filter in filters:
+            LOG.info("Executing gmail query for filter: %s", filter)
+            query_result: ThreadQueryResults = self.ctx.gmail_wrapper.query_threads(
+                query=filter.filter_expression,
+                limit=self.config.request_limit,
+                expect_one_message_per_thread=True,
+                format=self.config.fetch_mode,
+                show_empty_body_errors=False,
+                offline=self.config.offline_mode,
+                load_messages=False
+            )
+            LOG.debug(f"Received thread query result: {query_result}")
+            result_processor.add_result(filter, query_result.processor_results)
+
+
+        end_time = time.time()
+        seconds = end_time - start_time
+        LOG.info("Fetched all email filters in %d seconds", seconds)
+
+        table_rows = result_processor.convert_to_table_rows()
+        InboxDiscovery.print_result_table(table_rows, MultipleFilterResultProcessorRepresentation(), sort_by_column=None)
+
+
     @staticmethod
     def process_gmail_results(
         query_result: ThreadQueryResults,
         split_body_by: str,
         email_content_processors: Iterable[EmailContentProcessor],
-        email_message_processors: Iterable[EmailMessageProcessor]
+        email_message_processors: Iterable[EmailMessageProcessor],
     ):
         if not email_content_processors:
             email_content_processors = []
@@ -144,14 +202,15 @@ class InboxDiscovery:
         return True
 
     @classmethod
-    def print_result_table(cls, rows, processor_repr: ProcessorRepresentationAbs):
+    def print_result_table(cls, rows, processor_repr: ProcessorRepresentationAbs,
+                           sort_by_column="Count from this sender"):
         # TODO implement console mode --> Just print this and do not log anything to console other than the table
         # TODO add progressbar while loading emails
 
         CLI_LOG.record_console()
         cols = processor_repr.get_cols()
         col_styles = processor_repr.get_col_styles()
-        render_settings = TableRenderSettings(col_styles, wide_print=True, show_lines=False, sort_by_column="Count from this sender")
+        render_settings = TableRenderSettings(col_styles, wide_print=True, show_lines=False, sort_by_column=sort_by_column)
         InboxDiscoveryResults.print(rows, cols, render_settings)
         out_file = "/tmp/rich_table_output.html"
         files = CLI_LOG.export_to_html(out_file)

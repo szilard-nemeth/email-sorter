@@ -101,6 +101,30 @@ def discover_inbox(ctx, offline, main_query: str, fetch_mode: str):
     discovery.run()
 
 
+@cli.command()
+@click.option(
+    '--filters-file',
+    type=click.File('r'),  # 'r' for read mode
+    required=True,
+    help='Path to the json file containing filters'
+)
+@click.pass_context
+def filter_stats(ctx, filters_file: str):
+    """
+    Prints statistics by provided filter file
+    """
+    handler: MainCommandHandler = ctx.obj['handler']
+    email_sorter_ctx = handler.ctx
+
+    conf = InboxDiscoveryConfig(email_sorter_ctx,
+                                gmail_query=GMAIL_QUERY_INBOX,
+                                fetch_mode=ThreadQueryFormat.MINIMAL,
+                                offline_mode=False)
+    discovery = InboxDiscovery(conf, email_sorter_ctx)
+    discovery.create_filter_stats(filters_file)
+
+
+
 if __name__ == "__main__":
     LOG.info("Started application")
     Initializer.setup_dirs(execution_mode=ExecutionMode.PRODUCTION)

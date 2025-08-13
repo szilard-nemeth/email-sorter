@@ -55,3 +55,20 @@ class GroupingEmailMessageProcessorRepresentation(ProcessorRepresentationAbs):
              .bind_style("Count from this sender", "cyan")
              .bind_format_to_column("Count from this sender", no_wrap=True, justify="right"))
         return col_styles
+
+
+class MultipleFilterResultProcessorRepresentation(ProcessorRepresentationAbs):
+    def __init__(self):
+        pass
+
+    def get_cols(self):
+        return ["Filter", "Expression", "Gmail link"]
+
+    def get_col_styles(self):
+        col_styles = TableColumnStyles()
+        (col_styles
+         .bind_style("Filter", "cyan")
+         .bind_format_to_column("Expression", no_wrap=True, justify="left")
+         .bind_style("Gmail link", "yellow")
+         .bind_format_to_column("Gmail link", no_wrap=True, justify="right"))
+        return col_styles
