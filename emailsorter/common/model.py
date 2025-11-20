@@ -4,9 +4,14 @@ from abc import abstractmethod, ABC
 import logging
 from collections import defaultdict
 from enum import Enum
-from typing import Iterable, Callable
+from typing import Iterable, Callable, Dict, Tuple, Any, Set
 
 from googleapiwrapper.gmail_domain import GmailMessage
+
+UNLABELED_KEY = "Unlabeled (just Inbox)"
+LABELED_KEY = "Labeled"
+THREADS_KEY = "threads"
+COUNT_KEY = "count"
 
 LOG = logging.getLogger(__name__)
 
@@ -134,19 +139,58 @@ class GroupingEmailMessageProcessor(EmailMessageProcessor):
                 message.msg_id]
 
     def _get_results(self, row_producer: Callable[[str, GmailMessage, str, int], None]):
-        grouping_for_result_table = {}
+        # TODO This must be fixed, do not return two results
+        grouping_for_result_table: Dict[str, Dict[str, Any]] = defaultdict(dict)
         table_rows = []
+
+        # 1. grouping_for_result_table -> First, group by sender
         for sender, thread_message_lst in self.grouping_by_sender.items():
             no_of_messages_from_sender = len(thread_message_lst)
             # TODO add gmail query URL for each recipient: https://mail.google.com/mail/u/0/#search/label%3Ainbox
-
+            sender_key = f"Sender: {sender}"
             for thread_message in thread_message_lst:
                 thread = thread_message[0]
                 message = thread_message[1]
-                grouping_for_result_table[sender] = (thread, message.msg_id, message.subject)
+                if THREADS_KEY not in grouping_for_result_table[sender_key]:
+                    grouping_for_result_table[sender_key][THREADS_KEY] = set()
+                grouping_for_result_table[sender_key][THREADS_KEY].add((thread, message.subject))
                 row = row_producer(thread, message, sender, no_of_messages_from_sender)
                 if row:
                     table_rows.append(row)
+
+        # 2. grouping_for_result_table -> Second, group by inbox and labeled
+        visited_threads = set()
+        groups: Dict[str, Dict[str, Any]] = {UNLABELED_KEY: {THREADS_KEY: set()},
+                                             LABELED_KEY: {THREADS_KEY: set()}}
+        for sender, thread_message_lst in self.grouping_by_sender.items():
+            for thread_message in thread_message_lst:
+                thread = thread_message[0]
+                message = thread_message[1]
+                if thread not in visited_threads:
+                    visited_threads.add(thread)
+                    if not message.is_in_inbox:
+                        # raise ValueError(f"Every message should have the inbox label. Encountered Thread: {thread}, Message: {message}")
+                        # Skip non-inbox emails for now
+                        continue
+                    if message.is_in_inbox and not message.labels:
+                        groups[UNLABELED_KEY][THREADS_KEY].add((thread, message.subject))
+                    elif message.labels:
+                        groups[LABELED_KEY][THREADS_KEY].add((thread, message.subject))
+
+                    for label in message.labels:
+                        l_key = f"Label: {label}"
+                        if l_key not in groups:
+                            groups[l_key] = {THREADS_KEY: set()}
+                        groups[l_key][THREADS_KEY].add((thread, message.subject))
+
+
+        grouping_for_result_table.update(groups)
+        for k, dic in grouping_for_result_table.items():
+            dic[COUNT_KEY] = len(dic[THREADS_KEY])
+
+        # TODO temporarily remove key: THREADS (we are not interested in threads now, just the aggregate count
+        for group, dic in grouping_for_result_table.items():
+            del dic[THREADS_KEY]
         return grouping_for_result_table, table_rows
 
 class MultipleFilterResultProcessor(EmailMessageProcessor):

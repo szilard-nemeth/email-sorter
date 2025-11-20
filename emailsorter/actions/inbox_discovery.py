@@ -113,7 +113,9 @@ class InboxDiscovery:
 
         # TODO order table rows by 'no_of_messages_from_sender'
         rich.print(grouping_for_result_table)
-        InboxDiscovery.print_result_table(table_rows, GroupingEmailMessageProcessorRepresentation(result_type))
+
+        # TODO uncomment this later once rich table above is finalized?
+        # InboxDiscovery.print_result_table(table_rows, GroupingEmailMessageProcessorRepresentation(result_type))
 
     def create_filter_stats(self, filters_file: str):
         start_time = time.time()
