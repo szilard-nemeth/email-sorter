@@ -12,6 +12,7 @@ LOG = logging.getLogger(__name__)
 
 class ProcessorResultType(Enum):
     SIMPLIFIED = "simplified"
+    SIMPLIFIED_WITH_LABELS = "simplified_with_labels"
     DETAILED = "detailed"
 
 
@@ -56,6 +57,10 @@ class GroupingEmailMessageProcessor(EmailMessageProcessor):
         self.result_type = result_type
 
         self._visited_senders = set()
+        self._row_producers = {ProcessorResultType.SIMPLIFIED: self._produce_simplified_row,
+                               ProcessorResultType.SIMPLIFIED_WITH_LABELS: self._produce_simplified_with_labels_row,
+                               ProcessorResultType.DETAILED: self._produce_detailed_row,
+                               }
 
     def process(self, message: 'GmailMessage'):
         # This does print the whole email
@@ -79,20 +84,47 @@ class GroupingEmailMessageProcessor(EmailMessageProcessor):
         self.grouping_by_sender[message.sender_email].append((message.thread_id, message))
 
     def convert_to_table_rows(self):
-        row_producer = self._produce_simplified_row if self.result_type == ProcessorResultType.SIMPLIFIED else self._produce_detailed_row
+        if not self.result_type in self._row_producers:
+            raise NotImplementedError(f"Unknown result type: {self.result_type}, there is no row producer defined for this type!")
+        row_producer = self._row_producers[self.result_type]
         grouping_for_result_table, table_rows = self._get_results(row_producer)
         return grouping_for_result_table, table_rows
 
     def _produce_simplified_row(self, thread_id: str, message: GmailMessage, sender: str, no_of_messages_from_sender: int):
         if sender not in self._visited_senders:
             self._visited_senders.add(sender)
+            # TODO Returned list of data assumes specific order coming from: GroupingEmailMessageProcessorRepresentation.get_cols
+            #   ["Sender", "Count from this sender"]
+            #   Use dict instead?
             return [sender,
                 str(no_of_messages_from_sender)
                 ]
         # This sender was already visited, do not return new row for this sender again
         return None
 
+    def _produce_simplified_with_labels_row(self, thread_id: str, message: GmailMessage, sender: str, no_of_messages_from_sender: int):
+        if sender not in self._visited_senders:
+            self._visited_senders.add(sender)
+            # TODO Returned list of data assumes specific order coming from: GroupingEmailMessageProcessorRepresentation.get_cols
+            #   ["Sender", "Count from this sender"]
+            #   Use dict instead?
+            labels = ""
+            if message.labels:
+                labels = ",".join(message.labels)
+            return [sender,
+                    str(no_of_messages_from_sender),
+                    message.recipient_email,
+                    message.date_str,
+                    message.subject,
+                    thread_id,
+                    message.msg_id,
+                    labels]
+        return None
+
     def _produce_detailed_row(self, thread_id: str, message: GmailMessage, sender: str, no_of_messages_from_sender: int):
+        # TODO Returned list of data assumes specific order coming from: GroupingEmailMessageProcessorRepresentation.get_cols
+        #   ["Sender", "Count from this sender", "Recipient", "Date", "Subject", "Thread ID", "Message ID"]
+        #   Use dict instead?
         return [sender,
                 str(no_of_messages_from_sender),
                 message.recipient_email,

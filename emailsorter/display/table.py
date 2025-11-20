@@ -9,7 +9,7 @@ from emailsorter.display.console import CliLogger
 LOG = logging.getLogger(__name__)
 CLI_LOG = CliLogger(LOG)
 
-
+# TODO Move from dexter and check diff: table.py + ReApiReportAbs + one report Impl
 class TableColumnStyles:
     def __init__(self):
         self._color_by_value: Dict[str, Dict[str, str]] = defaultdict(dict)

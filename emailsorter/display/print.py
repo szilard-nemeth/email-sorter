@@ -22,7 +22,6 @@ class PrettyPrint:
         from rich.pretty import pprint
         pprint(obj)
 
-    # TODO DEX-12547 Migrate these to CLI_LOG.print_xxx_text instance calls for each individual caller
     @staticmethod
     def print_info_text(text, suppress_logger=False):
         CLI_LOG.print_themed(text, TextStyle.INFO, suppress_logger=suppress_logger)

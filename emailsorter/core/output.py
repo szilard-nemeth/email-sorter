@@ -32,7 +32,10 @@ class GroupingEmailMessageProcessorRepresentation(ProcessorRepresentationAbs):
             return ["Sender", "Count from this sender"]
         elif self.result_type == ProcessorResultType.DETAILED:
             return ["Sender", "Count from this sender", "Recipient", "Date", "Subject", "Thread ID", "Message ID"]
-        return None
+        elif self.result_type == ProcessorResultType.SIMPLIFIED_WITH_LABELS:
+            return ["Sender", "Count from this sender", "Recipient", "Date", "Subject", "Thread ID", "Message ID", "Labels"]
+        else:
+            raise NotImplementedError(f"Rendering not implemented for {self.result_type}")
 
     def get_col_styles(self):
         col_styles = TableColumnStyles()
@@ -54,6 +57,16 @@ class GroupingEmailMessageProcessorRepresentation(ProcessorRepresentationAbs):
              .bind_format_to_column("Sender", no_wrap=True, justify="left")
              .bind_style("Count from this sender", "cyan")
              .bind_format_to_column("Count from this sender", no_wrap=True, justify="right"))
+        elif self.result_type == ProcessorResultType.SIMPLIFIED_WITH_LABELS:
+            (col_styles
+             .bind_style("Sender", "cyan")
+             .bind_format_to_column("Sender", no_wrap=True, justify="left")
+             .bind_style("Count from this sender", "cyan")
+             .bind_format_to_column("Count from this sender", no_wrap=True, justify="right")
+             .bind_style("Labels", "blue")
+             .bind_format_to_column("Labels", no_wrap=True, justify="left"))
+        else:
+            raise NotImplementedError(f"Rendering not implemented for {self.result_type}")
         return col_styles
 
 

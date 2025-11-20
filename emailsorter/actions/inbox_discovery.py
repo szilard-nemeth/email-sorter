@@ -103,7 +103,7 @@ class InboxDiscovery:
         seconds = end_time - start_time
         LOG.info("Fetched email threads in %d seconds", seconds)
 
-        result_type = ProcessorResultType.SIMPLIFIED
+        result_type = ProcessorResultType.SIMPLIFIED_WITH_LABELS
         grouping_processor = GroupingEmailMessageProcessor(result_type)
         self.process_gmail_results(query_result,
                                    split_body_by=self.config.content_line_sep,
