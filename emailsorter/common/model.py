@@ -183,7 +183,7 @@ class GroupingEmailMessageProcessor(EmailMessageProcessor):
                             groups[l_key] = {THREADS_KEY: set()}
                         groups[l_key][THREADS_KEY].add((thread, message.subject))
 
-
+        # TODO Add sanity check: sum up count of Label[count] keys and compare value with Labeled[count]
         grouping_for_result_table.update(groups)
         for k, dic in grouping_for_result_table.items():
             dic[COUNT_KEY] = len(dic[THREADS_KEY])
