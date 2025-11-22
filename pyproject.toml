@@ -31,12 +31,20 @@ include = [
 
 
 [tool.poetry.dependencies]
-python = "^3.8.12"
-python-common-lib = "1.0.6"
-google-api-wrapper2 = "1.0.5"
+# python = "^3.8.12"
+# python-common-lib = "1.0.6"
+# google-api-wrapper2 = "1.0.5"
+# rich = "13.4.1"
+
+# Local google api wrapper setup
+python = "^3.9"
+google-api-wrapper2 = { path = "../google-api-wrapper", develop = true }
+python-common-lib = "1.0.18"
+rich = "13.7.0"
+
 dataclasses-json = "*"
 click = "8.1.3"
-rich = "13.4.1"
+
 
 
 [tool.poetry.group.dev.dependencies]
