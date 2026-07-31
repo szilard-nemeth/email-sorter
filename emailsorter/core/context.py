@@ -13,7 +13,7 @@ from pythoncommons.project_utils import ProjectUtils
 class EmailSorterContext:
     def __init__(self, use_cache: bool, account_email: str):
         # Set up dirs
-        self.output_dir = ProjectUtils.get_output_child_dir(CommandType.EMAIL_SORTER.output_dir_name)
+        self.output_dir = ProjectUtils.get_output_child_dir(CommandType.EMAIL_SORTER.real_name)
         self.session_dir = ProjectUtils.get_session_dir_under_child_dir(FileUtils.basename(self.output_dir))
         self.email_cache_dir = FileUtils.join_path(self.output_dir, "email_cache")
 

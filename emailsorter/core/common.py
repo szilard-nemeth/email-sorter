@@ -19,19 +19,16 @@ class EmailSorterEnvVar(Enum):
 
 
 class CommandType(Enum):
-    EMAIL_SORTER = (PROJECT_NAME, PROJECT_NAME, True)
+    EMAIL_SORTER = (PROJECT_NAME, True)
 
-    # TODO Unify value vs. output_dir_name: Using both causes confusion
-    def __init__(self, value, output_dir_name, session_based: bool, session_link_name: str = ""):
+    def __init__(self, value: str, session_based: bool, session_link_name: str = ""):
+        # `real_name` is the canonical string identifier for the command. It doubles
+        # as the output directory name and is the base for every latest-* symlink
+        # name below — one name, one meaning.
         self.real_name = value
-        self.output_dir_name = output_dir_name
         self.session_based = session_based
 
-        if session_link_name:
-            self.session_link_name = session_link_name
-        else:
-            self.session_link_name = f"latest-session-{value}"
-
+        self.session_link_name = session_link_name or f"latest-session-{value}"
         self.log_link_name = f"latest-log-{value}"
         self.command_data_name = f"latest-command-data-{value}"
         self.command_data_zip_name: str = f"{LATEST_DATA_ZIP_LINK_NAME}-{value}"
@@ -45,11 +42,6 @@ class CommandType(Enum):
     def by_real_name(val):
         allowed_values = {ct.real_name: ct for ct in CommandType}
         return CommandType._validate(val, allowed_values, "Invalid enum value by real name")
-
-    @staticmethod
-    def by_output_dir_name(val):
-        allowed_values = {ct.output_dir_name: ct for ct in CommandType}
-        return CommandType._validate(val, allowed_values, "Invalid enum value by output dir name")
 
     @classmethod
     def _validate(cls, val, allowed_values, err_message_prefix):
