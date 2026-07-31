@@ -211,7 +211,6 @@ class InboxDiscovery:
     @classmethod
     def print_result_table(cls, rows, processor_repr: ProcessorRepresentationAbs,
                            sort_by_column="Count from this sender"):
-        # TODO implement console mode --> Just print this and do not log anything to console other than the table
         # TODO add progressbar while loading emails
 
         CLI_LOG.record_console()

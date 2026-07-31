@@ -29,6 +29,21 @@ class Initializer:
         return logging_config
 
     @staticmethod
+    def silence_console_handler(logging_config: SimpleLoggingSetupConfig):
+        """Silence the console log handler so only explicit prints reach stdout.
+
+        Used by --console mode: the only thing the user should see is the result
+        table (rendered via rich.Console.print, which bypasses the logging
+        framework). File logging is unaffected.
+        """
+        handler = getattr(logging_config, "console_handler", None)
+        if handler is None:
+            LOG.warning("No console handler found on logging config; --console mode has nothing to silence.")
+            return
+        # CRITICAL + 1 leaves nothing that can pass through.
+        handler.setLevel(logging.CRITICAL + 1)
+
+    @staticmethod
     def configure_loggers(args):
         googleapiwrapper_level = getattr(args, "logging_level_googleapiwrapper", None)
         pythoncommons_level = getattr(args, "logging_level_pythoncommons", None)

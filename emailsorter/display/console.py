@@ -27,6 +27,11 @@ class CliLogger(logging.Logger):
     _wide_console: Console = None
     WIDE_PRINT_WIDTH = 300
 
+    # Class-level flag: when True, handle() skips the PrettyPrint side-channel
+    # so INFO log records do not surface on the console via the themed print.
+    # File logging via the parent Logger is unaffected.
+    _console_muted: bool = False
+
     def __init__(self, logger):
         super().__init__(logger.name)
         self._logger: logging.Logger = logger
@@ -34,6 +39,14 @@ class CliLogger(logging.Logger):
             CliLogger._console = Console()
             CliLogger._wide_console = Console(width=CliLogger.WIDE_PRINT_WIDTH)
         self._formatter = logging.Formatter()
+
+    @classmethod
+    def mute_console(cls):
+        cls._console_muted = True
+
+    @classmethod
+    def unmute_console(cls):
+        cls._console_muted = False
 
     def _set_file_handler(self):
         filtered_handlers = list(
@@ -50,6 +63,10 @@ class CliLogger(logging.Logger):
 
     def handle(self, record):
         super(CliLogger, self).handle(record)
+        if CliLogger._console_muted:
+            # In --console mode the only thing that should reach stdout is the
+            # result table; skip the themed side-channel print entirely.
+            return
         from emailsorter.display.print import PrettyPrint
 
         if record.levelno == logging.INFO:

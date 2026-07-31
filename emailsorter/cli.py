@@ -10,6 +10,7 @@ from rich.table import Table
 from emailsorter.core.error import EmailSorterException
 from emailsorter.core.context import EmailSorterContext
 from emailsorter.core.handler import MainCommandHandler
+from emailsorter.display.console import CliLogger
 from initializer import Initializer
 
 GMAIL_QUERY_INBOX = "label:inbox"
@@ -23,16 +24,26 @@ LOG = logging.getLogger(__name__)
 @click.option('-d', '--debug', is_flag=True, help='turn on DEBUG level logging')
 @click.option('-t', '--trace', is_flag=True, help='turn on TRACE level logging')
 @click.option('--no-cache', is_flag=True, help='Disable email caching')
+@click.option('--console', 'console_mode', is_flag=True,
+              help='Console mode: suppress all non-table console log output. '
+                   'File logging is unaffected.')
 @click.pass_context
-def cli(ctx, account_email, debug: bool, trace: bool, no_cache: bool):
+def cli(ctx, account_email, debug: bool, trace: bool, no_cache: bool, console_mode: bool):
     if ctx.invoked_subcommand == "usage":
         return
 
     level = logging.DEBUG if debug else logging.INFO
-    Initializer.configure_logging(debug, trace)
+    logging_config = Initializer.configure_logging(debug, trace)
+
+    if console_mode:
+        # File logging keeps everything; the console stops receiving log output
+        # so only rich.Console prints (label summary + result table) reach stdout.
+        Initializer.silence_console_handler(logging_config)
+        CliLogger.mute_console()
 
     ctx.ensure_object(dict)
     ctx.obj['loglevel'] = level
+    ctx.obj['console_mode'] = console_mode
 
     LOG.info("Invoked command {}".format(ctx.invoked_subcommand))
     context = EmailSorterContext(use_cache=not no_cache, account_email=account_email)
