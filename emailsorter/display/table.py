@@ -99,38 +99,41 @@ class EmailTable:
             col_style_dict = self._render_settings.get_column_style_dict(col)
             self._table.add_column(col, **col_style_dict)
 
-    def render(self, rows: List[List[Any]]):
-        self._rows = rows
+    def render(self, rows: List[Dict[str, Any]]):
+        """Render rows into the underlying Rich table.
+
+        Each row is a dict keyed by column name; the value under a column that
+        this table does not declare is dropped. A column declared by the table
+        but missing from a row renders as an empty cell.
+        """
         self._rows = self._do_sorting(rows)
 
         for row in self._rows:
-            vals = [self._render_settings.format_value(self._cols[idx], val) for idx, val in enumerate(row)]
+            vals = [
+                self._render_settings.format_value(col, row.get(col, ""))
+                for col in self._cols
+            ]
             self._table.add_row(*vals)
 
-    def _do_sorting(self, rows):
-        def is_numeric_column(col_idx):
+    def _do_sorting(self, rows: List[Dict[str, Any]]):
+        sort_by_column = self.get_sort_by_column()
+        if not sort_by_column:
+            return rows
+
+        def is_numeric_column(col: str) -> bool:
             for row in rows:
                 try:
-                    int(row[col_idx])
+                    int(row.get(col, ""))
                 except (ValueError, TypeError):
                     return False
             return True
 
-        sort_by_column = self.get_sort_by_column()
-        sort_by_column_idx = self.get_sort_by_column_idx(sort_by_column)
-
         LOG.debug("Sorting by column: %s", sort_by_column)
-        LOG.debug("Column index: %s", sort_by_column_idx)
-        LOG.debug("First 5 values to sort by: %s", [row[sort_by_column_idx] for row in rows[:5]])
+        LOG.debug("First 5 values to sort by: %s", [row.get(sort_by_column) for row in rows[:5]])
 
-        # if sort_by_column:
-        #     rows = sorted(rows, key=lambda row: int(row[sort_by_column_idx]), reverse=True)
-        if sort_by_column:
-            if is_numeric_column(sort_by_column_idx):
-                rows = sorted(rows, key=lambda row: int(row[sort_by_column_idx]), reverse=True)
-            else:
-                rows = sorted(rows, key=lambda row: str(row[sort_by_column_idx]).lower(), reverse=False)
-        return rows
+        if is_numeric_column(sort_by_column):
+            return sorted(rows, key=lambda row: int(row.get(sort_by_column, 0)), reverse=True)
+        return sorted(rows, key=lambda row: str(row.get(sort_by_column, "")).lower())
 
     def print(self):
         CLI_LOG.print(self._table, wide_print=self._render_settings._wide_print)
@@ -142,11 +145,5 @@ class EmailTable:
                 raise ValueError(f"Invalid sort by column: {col}. Available column names are: {self._cols}")
             return col
         return None
-
-    def get_sort_by_column_idx(self, col: str):
-        for idx, c in enumerate(self._cols):
-            if c == col:
-                return idx
-        return -1
 
 

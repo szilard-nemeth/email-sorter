@@ -1,6 +1,11 @@
 from abc import ABC, abstractmethod
 
-from emailsorter.common.model import ProcessorResultType
+from emailsorter.common.model import (
+    ProcessorResultType,
+    COL_SENDER, COL_COUNT, COL_RECIPIENT, COL_DATE, COL_SUBJECT,
+    COL_THREAD_ID, COL_MSG_ID, COL_LABELS,
+    COL_FILTER, COL_FILTER_COUNT, COL_GMAIL_LINK,
+)
 from emailsorter.display.table import TableColumnStyles, TableRenderSettings, EmailTable
 
 
@@ -28,11 +33,11 @@ class GroupingEmailMessageProcessorRepresentation(ProcessorRepresentationAbs):
 
     def get_cols(self):
         if self.result_type == ProcessorResultType.SIMPLIFIED:
-            return ["Sender", "Count from this sender"]
+            return [COL_SENDER, COL_COUNT]
         elif self.result_type == ProcessorResultType.DETAILED:
-            return ["Sender", "Count from this sender", "Recipient", "Date", "Subject", "Thread ID", "Message ID"]
+            return [COL_SENDER, COL_COUNT, COL_RECIPIENT, COL_DATE, COL_SUBJECT, COL_THREAD_ID, COL_MSG_ID]
         elif self.result_type == ProcessorResultType.SIMPLIFIED_WITH_LABELS:
-            return ["Sender", "Count from this sender", "Recipient", "Date", "Subject", "Thread ID", "Message ID", "Labels"]
+            return [COL_SENDER, COL_COUNT, COL_RECIPIENT, COL_DATE, COL_SUBJECT, COL_THREAD_ID, COL_MSG_ID, COL_LABELS]
         else:
             raise NotImplementedError(f"Rendering not implemented for {self.result_type}")
 
@@ -40,30 +45,30 @@ class GroupingEmailMessageProcessorRepresentation(ProcessorRepresentationAbs):
         col_styles = TableColumnStyles()
         if self.result_type == ProcessorResultType.DETAILED:
             (col_styles
-             .bind_style("Sender", "cyan")
-             .bind_format_to_column("Sender", no_wrap=True, justify="left")
-             .bind_style("Count from this sender", "cyan")
-             .bind_format_to_column("Count from this sender", no_wrap=True, justify="right")
-             .bind_style("Recipient", "magenta")
-             .bind_format_to_column("Recipient", no_wrap=True)
-             .bind_format_to_column("Date", no_wrap=True)
-             .bind_format_to_column("Subject", no_wrap=False, overflow="ellipsis")
-             .bind_format_to_column("Thread ID", no_wrap=True)
-             .bind_format_to_column("Message ID", no_wrap=True))
+             .bind_style(COL_SENDER, "cyan")
+             .bind_format_to_column(COL_SENDER, no_wrap=True, justify="left")
+             .bind_style(COL_COUNT, "cyan")
+             .bind_format_to_column(COL_COUNT, no_wrap=True, justify="right")
+             .bind_style(COL_RECIPIENT, "magenta")
+             .bind_format_to_column(COL_RECIPIENT, no_wrap=True)
+             .bind_format_to_column(COL_DATE, no_wrap=True)
+             .bind_format_to_column(COL_SUBJECT, no_wrap=False, overflow="ellipsis")
+             .bind_format_to_column(COL_THREAD_ID, no_wrap=True)
+             .bind_format_to_column(COL_MSG_ID, no_wrap=True))
         elif self.result_type == ProcessorResultType.SIMPLIFIED:
             (col_styles
-             .bind_style("Sender", "cyan")
-             .bind_format_to_column("Sender", no_wrap=True, justify="left")
-             .bind_style("Count from this sender", "cyan")
-             .bind_format_to_column("Count from this sender", no_wrap=True, justify="right"))
+             .bind_style(COL_SENDER, "cyan")
+             .bind_format_to_column(COL_SENDER, no_wrap=True, justify="left")
+             .bind_style(COL_COUNT, "cyan")
+             .bind_format_to_column(COL_COUNT, no_wrap=True, justify="right"))
         elif self.result_type == ProcessorResultType.SIMPLIFIED_WITH_LABELS:
             (col_styles
-             .bind_style("Sender", "cyan")
-             .bind_format_to_column("Sender", no_wrap=True, justify="left")
-             .bind_style("Count from this sender", "cyan")
-             .bind_format_to_column("Count from this sender", no_wrap=True, justify="right")
-             .bind_style("Labels", "blue")
-             .bind_format_to_column("Labels", no_wrap=True, justify="left"))
+             .bind_style(COL_SENDER, "cyan")
+             .bind_format_to_column(COL_SENDER, no_wrap=True, justify="left")
+             .bind_style(COL_COUNT, "cyan")
+             .bind_format_to_column(COL_COUNT, no_wrap=True, justify="right")
+             .bind_style(COL_LABELS, "blue")
+             .bind_format_to_column(COL_LABELS, no_wrap=True, justify="left"))
         else:
             raise NotImplementedError(f"Rendering not implemented for {self.result_type}")
         return col_styles
@@ -74,16 +79,15 @@ class MultipleFilterResultProcessorRepresentation(ProcessorRepresentationAbs):
         pass
 
     def get_cols(self):
-        # Row shape from MultipleFilterResultProcessor._get_rows: [filter_desc, count, gmail_link]
-        return ["Filter", "Count", "Gmail link"]
+        return [COL_FILTER, COL_FILTER_COUNT, COL_GMAIL_LINK]
 
     def get_col_styles(self):
         col_styles = TableColumnStyles()
         (col_styles
-         .bind_style("Filter", "cyan")
-         .bind_format_to_column("Filter", no_wrap=True, justify="left")
-         .bind_style("Count", "cyan")
-         .bind_format_to_column("Count", no_wrap=True, justify="right")
-         .bind_style("Gmail link", "yellow")
-         .bind_format_to_column("Gmail link", no_wrap=True, justify="right"))
+         .bind_style(COL_FILTER, "cyan")
+         .bind_format_to_column(COL_FILTER, no_wrap=True, justify="left")
+         .bind_style(COL_FILTER_COUNT, "cyan")
+         .bind_format_to_column(COL_FILTER_COUNT, no_wrap=True, justify="right")
+         .bind_style(COL_GMAIL_LINK, "yellow")
+         .bind_format_to_column(COL_GMAIL_LINK, no_wrap=True, justify="right"))
         return col_styles

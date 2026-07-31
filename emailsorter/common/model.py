@@ -11,6 +11,23 @@ from googleapiwrapper.gmail_domain import GmailMessage
 UNLABELED_KEY = "Unlabeled (just Inbox)"
 LABELED_KEY = "Labeled"
 
+# Column-name constants for GroupingEmailMessageProcessor rows.
+# Both the row producers and GroupingEmailMessageProcessorRepresentation.get_cols()
+# reference these — the single source of truth that eliminates positional coupling.
+COL_SENDER = "Sender"
+COL_COUNT = "Count from this sender"
+COL_RECIPIENT = "Recipient"
+COL_DATE = "Date"
+COL_SUBJECT = "Subject"
+COL_THREAD_ID = "Thread ID"
+COL_MSG_ID = "Message ID"
+COL_LABELS = "Labels"
+
+# Column-name constants for MultipleFilterResultProcessor rows.
+COL_FILTER = "Filter"
+COL_FILTER_COUNT = "Count"
+COL_GMAIL_LINK = "Gmail link"
+
 LOG = logging.getLogger(__name__)
 
 class ProcessorResultType(Enum):
@@ -30,7 +47,7 @@ class EmailMessageProcessor(ABC):
         pass
 
     @abstractmethod
-    def convert_to_table_rows(self) -> Iterable[Iterable[str]]:
+    def convert_to_table_rows(self) -> List[Dict[str, str]]:
         pass
 
 
@@ -86,17 +103,18 @@ class GroupingEmailMessageProcessor(EmailMessageProcessor):
 
         self.grouping_by_sender[message.sender_email].append((message.thread_id, message))
 
-    def convert_to_table_rows(self) -> List[List[str]]:
+    def convert_to_table_rows(self) -> List[Dict[str, str]]:
         """Produce sender-grouped rows for the main results table.
 
-        Row shape is dictated by the active ProcessorResultType (see the matching
-        GroupingEmailMessageProcessorRepresentation.get_cols()).
+        Rows are dicts keyed by column name (see COL_* constants). Which keys
+        each row contains is dictated by the active ProcessorResultType and
+        must match the matching GroupingEmailMessageProcessorRepresentation.get_cols().
         """
         if not self.result_type in self._row_producers:
             raise NotImplementedError(f"Unknown result type: {self.result_type}, there is no row producer defined for this type!")
         row_producer = self._row_producers[self.result_type]
 
-        table_rows: List[List[str]] = []
+        table_rows: List[Dict[str, str]] = []
         for sender, thread_message_lst in self.grouping_by_sender.items():
             no_of_messages_from_sender = len(thread_message_lst)
             # TODO add gmail query URL for each recipient: https://mail.google.com/mail/u/0/#search/label%3Ainbox
@@ -151,47 +169,41 @@ class GroupingEmailMessageProcessor(EmailMessageProcessor):
         return summary
 
     def _produce_simplified_row(self, thread_id: str, message: GmailMessage, sender: str, no_of_messages_from_sender: int):
-        if sender not in self._visited_senders:
-            self._visited_senders.add(sender)
-            # TODO Returned list of data assumes specific order coming from: GroupingEmailMessageProcessorRepresentation.get_cols
-            #   ["Sender", "Count from this sender"]
-            #   Use dict instead?
-            return [sender,
-                str(no_of_messages_from_sender)
-                ]
-        # This sender was already visited, do not return new row for this sender again
-        return None
+        if sender in self._visited_senders:
+            # This sender was already visited, do not return new row for this sender again
+            return None
+        self._visited_senders.add(sender)
+        return {
+            COL_SENDER: sender,
+            COL_COUNT: str(no_of_messages_from_sender),
+        }
 
     def _produce_simplified_with_labels_row(self, thread_id: str, message: GmailMessage, sender: str, no_of_messages_from_sender: int):
-        if sender not in self._visited_senders:
-            self._visited_senders.add(sender)
-            # TODO Returned list of data assumes specific order coming from: GroupingEmailMessageProcessorRepresentation.get_cols
-            #   ["Sender", "Count from this sender"]
-            #   Use dict instead?
-            labels = ""
-            if message.labels:
-                labels = ",".join(message.labels)
-            return [sender,
-                    str(no_of_messages_from_sender),
-                    message.recipient_email,
-                    message.date_str,
-                    message.subject,
-                    thread_id,
-                    message.msg_id,
-                    labels]
-        return None
+        if sender in self._visited_senders:
+            return None
+        self._visited_senders.add(sender)
+        labels = ",".join(message.labels) if message.labels else ""
+        return {
+            COL_SENDER: sender,
+            COL_COUNT: str(no_of_messages_from_sender),
+            COL_RECIPIENT: message.recipient_email,
+            COL_DATE: message.date_str,
+            COL_SUBJECT: message.subject,
+            COL_THREAD_ID: thread_id,
+            COL_MSG_ID: message.msg_id,
+            COL_LABELS: labels,
+        }
 
     def _produce_detailed_row(self, thread_id: str, message: GmailMessage, sender: str, no_of_messages_from_sender: int):
-        # TODO Returned list of data assumes specific order coming from: GroupingEmailMessageProcessorRepresentation.get_cols
-        #   ["Sender", "Count from this sender", "Recipient", "Date", "Subject", "Thread ID", "Message ID"]
-        #   Use dict instead?
-        return [sender,
-                str(no_of_messages_from_sender),
-                message.recipient_email,
-                message.date_str,
-                message.subject,
-                thread_id,
-                message.msg_id]
+        return {
+            COL_SENDER: sender,
+            COL_COUNT: str(no_of_messages_from_sender),
+            COL_RECIPIENT: message.recipient_email,
+            COL_DATE: message.date_str,
+            COL_SUBJECT: message.subject,
+            COL_THREAD_ID: thread_id,
+            COL_MSG_ID: message.msg_id,
+        }
 
 class MultipleFilterResultProcessor(EmailMessageProcessor):
     def __init__(self):
@@ -202,14 +214,18 @@ class MultipleFilterResultProcessor(EmailMessageProcessor):
         # No-op for this processor
         pass
 
-    def convert_to_table_rows(self):
+    def convert_to_table_rows(self) -> List[Dict[str, str]]:
         return self._get_rows()
 
-    def _get_rows(self):
-        rows = []
+    def _get_rows(self) -> List[Dict[str, str]]:
+        rows: List[Dict[str, str]] = []
         for filter_desc, count in self.count_per_filter.items():
             filter = self._filters_by_description[filter_desc]
-            rows.append([filter_desc, count, filter.gmail_link])
+            rows.append({
+                COL_FILTER: filter_desc,
+                COL_FILTER_COUNT: str(count),
+                COL_GMAIL_LINK: filter.gmail_link,
+            })
         return rows
 
     def add_result(self, filter: 'GmailFilter', processor_results):
