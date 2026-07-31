@@ -111,11 +111,19 @@ class InboxDiscovery:
                                    email_message_processors=[grouping_processor])
         grouping_for_result_table, table_rows = grouping_processor.convert_to_table_rows()
 
-        # TODO order table rows by 'no_of_messages_from_sender'
-        rich.print(grouping_for_result_table)
+        # Label-bucket summary (Unlabeled / Labeled / per-Label counts) — pulled from the
+        # aggregate dict. Sender rows are rendered as the main table below.
+        label_group_summary = {
+            k: v for k, v in grouping_for_result_table.items() if not k.startswith("Sender: ")
+        }
+        if label_group_summary:
+            rich.print(label_group_summary)
 
-        # TODO uncomment this later once rich table above is finalized?
-        # InboxDiscovery.print_result_table(table_rows, GroupingEmailMessageProcessorRepresentation(result_type))
+        # Main sender table. Rows are sorted desc by "Count from this sender" via
+        # TableRenderSettings.sort_by_column inside print_result_table.
+        InboxDiscovery.print_result_table(
+            table_rows, GroupingEmailMessageProcessorRepresentation(result_type)
+        )
 
     def create_filter_stats(self, filters_file: str):
         start_time = time.time()
