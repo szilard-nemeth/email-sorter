@@ -109,15 +109,13 @@ class InboxDiscovery:
                                    split_body_by=self.config.content_line_sep,
                                    email_content_processors=[NoOpEmailContentProcessor()],
                                    email_message_processors=[grouping_processor])
-        grouping_for_result_table, table_rows = grouping_processor.convert_to_table_rows()
+        table_rows = grouping_processor.convert_to_table_rows()
+        label_summary = grouping_processor.build_label_summary()
 
-        # Label-bucket summary (Unlabeled / Labeled / per-Label counts) — pulled from the
-        # aggregate dict. Sender rows are rendered as the main table below.
-        label_group_summary = {
-            k: v for k, v in grouping_for_result_table.items() if not k.startswith("Sender: ")
-        }
-        if label_group_summary:
-            rich.print(label_group_summary)
+        # Label-bucket summary (Unlabeled / Labeled / per-Label counts) printed
+        # above the main table.
+        if label_summary:
+            rich.print(label_summary)
 
         # Main sender table. Rows are sorted desc by "Count from this sender" via
         # TableRenderSettings.sort_by_column inside print_result_table.
