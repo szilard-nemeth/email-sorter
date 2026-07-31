@@ -166,8 +166,7 @@ class InboxDiscovery:
         skipped_emails: List[EmailContent] = []
         for message in query_result.threads.messages:
             email_content = InboxDiscovery._create_email_content(message, split_body_by)
-            # TODO print date
-            LOG.debug("Processing message: %s", email_content.subject)
+            LOG.debug("Processing message from %s: %s", email_content.date, email_content.subject)
 
             # Email content processor is invoked with original lines from email (except stripping)
             for p in email_content_processors:
