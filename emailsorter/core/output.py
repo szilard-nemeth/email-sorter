@@ -75,13 +75,16 @@ class MultipleFilterResultProcessorRepresentation(ProcessorRepresentationAbs):
         pass
 
     def get_cols(self):
-        return ["Filter", "Expression", "Gmail link"]
+        # Row shape from MultipleFilterResultProcessor._get_rows: [filter_desc, count, gmail_link]
+        return ["Filter", "Count", "Gmail link"]
 
     def get_col_styles(self):
         col_styles = TableColumnStyles()
         (col_styles
          .bind_style("Filter", "cyan")
-         .bind_format_to_column("Expression", no_wrap=True, justify="left")
+         .bind_format_to_column("Filter", no_wrap=True, justify="left")
+         .bind_style("Count", "cyan")
+         .bind_format_to_column("Count", no_wrap=True, justify="right")
          .bind_style("Gmail link", "yellow")
          .bind_format_to_column("Gmail link", no_wrap=True, justify="right"))
         return col_styles
