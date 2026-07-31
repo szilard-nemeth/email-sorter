@@ -79,10 +79,10 @@ class GroupingEmailMessageProcessor(EmailMessageProcessor):
             # Sender X sends a mail to email Z
             # Z forwards the mail to recipient Y
             # So Z becomes the sender and Sender X was the original sender
-            # TODO Debug this with warning log
-            # LOG.warning("Multiple senders found for email thread. Sender, recipient, subject: %s",
-            #             list(zip(self.senders, self.recipients, self.subjects)))
-            pass
+            LOG.warning(
+                "Multiple senders found across processed messages. Sender/recipient/subject triples so far: %s",
+                list(zip(self.senders, self.recipients, self.subjects)),
+            )
 
         self.grouping_by_sender[message.sender_email].append((message.thread_id, message))
 
