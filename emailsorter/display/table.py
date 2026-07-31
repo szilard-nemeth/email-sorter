@@ -52,13 +52,17 @@ class TableColumnStyles:
 
 class TableRenderSettings:
     def __init__(self, col_styles: TableColumnStyles, wide_print=False, show_lines=False,
-                 sort_by_column: str=None):
+                 sort_by_column: str = None, title: str = None, expand: bool = False,
+                 min_width: int = None):
         if not col_styles:
             raise ValueError("col_styles cannot be None!")
         self._col_styles: TableColumnStyles = col_styles
         self._wide_print = wide_print
         self._show_lines = show_lines
         self.sort_by_column = sort_by_column
+        self._title = title
+        self._expand = expand
+        self._min_width = min_width
 
     def format_value(self, col: str, val: str):
         style = self._col_styles.style_by_col(col)
@@ -75,7 +79,12 @@ class TableRenderSettings:
         return self._col_styles.get_column_style_dict(col_name)
 
     def get_table_config_dict(self):
-        return {"show_lines": self._show_lines}
+        config = {"show_lines": self._show_lines, "expand": self._expand}
+        if self._title is not None:
+            config["title"] = self._title
+        if self._min_width is not None:
+            config["min_width"] = self._min_width
+        return config
 
 
 class EmailTable:
