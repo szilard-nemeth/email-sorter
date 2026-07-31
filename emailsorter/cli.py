@@ -8,7 +8,6 @@ from rich import print as rich_print, box
 from rich.table import Table
 
 from emailsorter.core.error import EmailSorterException
-from emailsorter.actions.inbox_discovery import InboxDiscovery, InboxDiscoveryConfig
 from emailsorter.core.context import EmailSorterContext
 from emailsorter.core.handler import MainCommandHandler
 from initializer import Initializer
@@ -83,7 +82,6 @@ def discover_inbox(ctx, offline, main_query: str, fetch_mode: str):
     Discovers Inbox
     """
     handler: MainCommandHandler = ctx.obj['handler']
-    email_sorter_ctx = handler.ctx
 
     if not main_query:
         main_query = GMAIL_QUERY_INBOX
@@ -93,12 +91,7 @@ def discover_inbox(ctx, offline, main_query: str, fetch_mode: str):
     else:
         fetch_mode = ThreadQueryFormat.METADATA
 
-    conf = InboxDiscoveryConfig(email_sorter_ctx,
-                                gmail_query=main_query,
-                                fetch_mode=fetch_mode,
-                                offline_mode=offline)
-    discovery = InboxDiscovery(conf, email_sorter_ctx)
-    discovery.run()
+    handler.discover_inbox(gmail_query=main_query, fetch_mode=fetch_mode, offline_mode=offline)
 
 
 @cli.command()
@@ -114,14 +107,12 @@ def filter_stats(ctx, filters_file: str):
     Prints statistics by provided filter file
     """
     handler: MainCommandHandler = ctx.obj['handler']
-    email_sorter_ctx = handler.ctx
-
-    conf = InboxDiscoveryConfig(email_sorter_ctx,
-                                gmail_query=GMAIL_QUERY_INBOX,
-                                fetch_mode=ThreadQueryFormat.MINIMAL,
-                                offline_mode=False)
-    discovery = InboxDiscovery(conf, email_sorter_ctx)
-    discovery.create_filter_stats(filters_file)
+    handler.filter_stats(
+        filters_file,
+        gmail_query=GMAIL_QUERY_INBOX,
+        fetch_mode=ThreadQueryFormat.MINIMAL,
+        offline_mode=False,
+    )
 
 
 
